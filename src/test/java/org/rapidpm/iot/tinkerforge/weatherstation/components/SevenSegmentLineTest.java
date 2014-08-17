@@ -5,10 +5,7 @@ import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.Before;
-import org.junit.After;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.loadui.testfx.Assertions;
 import org.loadui.testfx.GuiTest;
@@ -31,7 +28,7 @@ public class SevenSegmentLineTest extends GuiTest {
   /**
    * Method: setTheSegments(int rawValue)
    */
-  @Test
+  @Test @Ignore
   public void testSetTheSegments01() throws Exception {
     final SevenSegmentLine line = find("#line");
     Assert.assertNotNull(line);
