@@ -35,7 +35,7 @@ public class SevenSegmentLineTest extends GuiTest {
     FXTestUtils.invokeAndWait(() -> {
       line.setNachkommastelle(2);
       line.setTheSegments(100); //Ergebnis 1.00
-    }, 2);
+    }, 20);
 
     final SevenSegment seg_0 = find("#segment_0"); //0
     Assert.assertNotNull(seg_0);
@@ -59,7 +59,7 @@ public class SevenSegmentLineTest extends GuiTest {
   @Test
   public void testSetDescription() throws Exception {
     final SevenSegmentLine line = find("#line");
-    FXTestUtils.invokeAndWait(() -> line.setDescription("DemoDescription"), 2);
+    FXTestUtils.invokeAndWait(() -> line.setDescription("DemoDescription"), 20);
     final Label label = find("#label");
     Assert.assertNotNull(label);
     Assert.assertEquals(label.getText(), "DemoDescription");
@@ -73,7 +73,7 @@ public class SevenSegmentLineTest extends GuiTest {
   @Test
   public void testSetNachkommastelle01() throws Exception {
     final SevenSegmentLine line = find("#line");
-    FXTestUtils.invokeAndWait(() -> line.setNachkommastelle(3), 2);
+    FXTestUtils.invokeAndWait(() -> line.setNachkommastelle(3), 20);
     final SevenSegment node = find("#segment_3");
     Assert.assertNotNull(node);
     Assert.assertTrue(node.isDotOn());
@@ -82,7 +82,7 @@ public class SevenSegmentLineTest extends GuiTest {
   @Test
   public void testSetNachkommastelle02() throws Exception {
     final SevenSegmentLine line = find("#line");
-    FXTestUtils.invokeAndWait(() -> line.setNachkommastelle(3), 2);
+    FXTestUtils.invokeAndWait(() -> line.setNachkommastelle(3), 20);
     for(int i=0; i<7;i++){
       final SevenSegment node = find("#segment_"+i);
       Assert.assertNotNull(node);
