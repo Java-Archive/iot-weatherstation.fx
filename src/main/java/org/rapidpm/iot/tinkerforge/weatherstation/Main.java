@@ -26,7 +26,15 @@ import java.io.IOException;
  */
 public class Main extends Application {
 
+  private String temperatureUID = "";  // 216
+  private String barometerUID = "";    // 221
+  private String ambientLightUID = ""; // 21
+  private String humidityUID = "";     // 27
+  private static String masterIP = "";
+  private int masterPort = 4223;
+
   public static void main(String[] args) {
+    masterIP = args[0];
     launch(args);
   }
 
@@ -36,70 +44,35 @@ public class Main extends Application {
   private BrickletAmbientLight ambientLight;
   private BrickletHumidity humidity;
 
+  private final IPConnection ipcon = new IPConnection();
+
+  final AnchorPane root = new AnchorPane();
 
   @Override
   public void start(Stage primaryStage) throws Exception {
     primaryStage.setTitle("TF RaspiWeather");
     primaryStage.setFullScreen(true);
 
-
-    final AnchorPane root = new AnchorPane();
-    root.setStyle("-fx-background-color: black");
-
-    final Clock clock = ClockBuilder.create()
-        .prefSize(106, 120)
-        .design(Clock.Design.DB)
-        .text("TinkerTime")
-//        .time(LocalTime.now().plus(Duration.of(-2, ChronoUnit.HOURS)))
-//        .time(LocalTime.now())
-        .autoNightMode(true)
-        .build();
-     clock.setRunning(true);
-
-
-    final SimpleGauge thermoMeter = SimpleGaugeBuilder.create()
-        .prefSize(106, 120)
-        .sections(
-            new Section(-20, -10, "0"),
-            new Section(-10, 0, "1"),
-            new Section(0, 10, "2"),
-            new Section(10, 20, "3"),
-            new Section(20, 30, "4"),
-            new Section(30, 40, "5")
-//            new Section(40, 50, "6")
-        )
-//        .sectionFill0(Color.BLUE)
-//        .sectionFill1(Color.LIGHTBLUE)
-//        .sectionFill2(Color.LIGHTGREEN)
-//        .sectionFill3(Color.GREEN)
-//        .sectionFill4(Color.ORANGE)
-//        .sectionFill5(Color.RED)
-//        .sectionFill6(Color.DARKRED)
-        .minValue(-20)
-        .maxValue(40)
-        .decimals(2)
-        .title("Temperature")
-        .unit("C")
-//        .value(20)
-        .styleClass(SimpleGauge.STYLE_CLASS_BLUE_TO_RED_6)
-        .build();
+    //entscheiden ob die Config angezeigt werden soll oder nicht
 
 
 
-    temp = new BrickletTemperature("dXj", getIpConnection());
-    temp.addTemperatureListener(i -> Platform.runLater(() -> thermoMeter.setValue((i / 100.0) + 20)));
-    temp.setTemperatureCallbackPeriod(1000);
-
+    final AnchorPane weatherOverviewPane = new AnchorPane();
+    weatherOverviewPane.setStyle("-fx-background-color: black");
 
     final HBox hBox = new HBox();
+    weatherOverviewPane.getChildren().add(hBox);
+
     final VBox left = new VBox();
     final VBox right = new VBox();
 
     hBox.getChildren().add(left);
     hBox.getChildren().add(right);
 
-
+    final Clock clock = createClock();
     right.getChildren().add(clock);
+
+    final SimpleGauge thermoMeter = createThermoMeter();
     right.getChildren().add(thermoMeter);
 
     final VBox row01 = new VBox();
@@ -130,35 +103,91 @@ public class Main extends Application {
       line01.getChildren().add(sevenSegment);
     }
 
-    //fuehrende 0 bei weniger 7 Stellen
-    barometer = new BrickletBarometer("jY4", getIpConnection());
-    barometer.addAirPressureListener(i -> Platform.runLater(() -> setTheSegments(sevenSegmentsLine01, i)));
-    barometer.setAirPressureCallbackPeriod(1000);
-
-
     final SevenSegment[] sevenSegmentsLine02 = getSevenSegments(1);
     for (final SevenSegment sevenSegment : sevenSegmentsLine02) {
       line02.getChildren().add(sevenSegment);
     }
-
-    ambientLight= new BrickletAmbientLight("jy2", getIpConnection());
-    ambientLight.addIlluminanceListener(i -> Platform.runLater(() -> setTheSegments(sevenSegmentsLine02, i)));
-    ambientLight.setIlluminanceCallbackPeriod(1000);
-
 
     final SevenSegment[] sevenSegmentsLine03 = getSevenSegments(1);
     for (final SevenSegment sevenSegment : sevenSegmentsLine03) {
       line03.getChildren().add(sevenSegment);
     }
 
-    humidity = new BrickletHumidity("kfd",getIpConnection());
-    humidity.addHumidityListener(i -> Platform.runLater(() -> setTheSegments(sevenSegmentsLine03, i)));
-    humidity.setHumidityCallbackPeriod(1000);
 
 
-    root.getChildren().add(hBox);
-    primaryStage.setScene(new Scene(root, 320, 240));
+    initTinkerForgeElements(thermoMeter, sevenSegmentsLine01, sevenSegmentsLine02, sevenSegmentsLine03);
+
+
+    primaryStage.setScene(new Scene(weatherOverviewPane, 320, 240));
     primaryStage.show();
+  }
+
+  private void initTinkerForgeElements(SimpleGauge thermoMeter,
+                                       SevenSegment[] sevenSegmentsLine01,
+                                       SevenSegment[] sevenSegmentsLine02,
+                                       SevenSegment[] sevenSegmentsLine03) throws IOException, AlreadyConnectedException, NotConnectedException, TimeoutException {
+    //Connect TinkerForge Elements
+    ipcon.setAutoReconnect(true);
+    ipcon.connect(masterIP, masterPort);
+    ipcon.addEnumerateListener((uid, s1, c, shorts, shorts1, deviceIdentifier, i1) -> {
+      switch (deviceIdentifier) {
+        case 216: temperatureUID = uid ; break;
+        case 221: barometerUID = uid ; break;
+        case 21: ambientLightUID = uid ; break;
+        case 27: humidityUID = uid ; break;
+      }
+    });
+    ipcon.enumerate();
+
+
+    temp = new BrickletTemperature(temperatureUID, ipcon);
+    temp.addTemperatureListener(i -> Platform.runLater(() -> thermoMeter.setValue((i / 100.0) + 20)));
+    temp.setTemperatureCallbackPeriod(1000);  //TODO einstellbar
+
+    //fuehrende 0 bei weniger 7 Stellen
+    barometer = new BrickletBarometer(barometerUID, ipcon);
+    barometer.addAirPressureListener(i -> Platform.runLater(() -> setTheSegments(sevenSegmentsLine01, i)));
+    barometer.setAirPressureCallbackPeriod(1000); //TODO einstellbar
+
+    ambientLight = new BrickletAmbientLight(ambientLightUID, ipcon);
+    ambientLight.addIlluminanceListener(i -> Platform.runLater(() -> setTheSegments(sevenSegmentsLine02, i)));
+    ambientLight.setIlluminanceCallbackPeriod(1000); //TODO einstellbar
+
+    humidity = new BrickletHumidity(humidityUID, ipcon);
+    humidity.addHumidityListener(i -> Platform.runLater(() -> setTheSegments(sevenSegmentsLine03, i)));
+    humidity.setHumidityCallbackPeriod(1000);  //TODO einstellbar
+  }
+
+  private Clock createClock() {
+    final Clock clock = ClockBuilder.create()
+        .prefSize(106, 120)
+        .design(Clock.Design.DB)
+        .text("TinkerTime")
+        .autoNightMode(true)
+        .build();
+    clock.setRunning(true);
+    return clock;
+  }
+
+  private SimpleGauge createThermoMeter() {
+    return SimpleGaugeBuilder.create()
+          .prefSize(106, 120)
+          .sections(
+              new Section(-20, -10, "0"),
+              new Section(-10, 0, "1"),
+              new Section(0, 10, "2"),
+              new Section(10, 20, "3"),
+              new Section(20, 30, "4"),
+              new Section(30, 40, "5")
+          )
+          .minValue(-20)
+          .maxValue(40)
+          .decimals(2)
+          .title("Temperature")
+          .unit("C")
+  //        .value(20)
+          .styleClass(SimpleGauge.STYLE_CLASS_BLUE_TO_RED_6)
+          .build();
   }
 
   private void setTheSegments(SevenSegment[] sevenSegmentsLine, int i) {
@@ -169,27 +198,20 @@ public class Main extends Application {
     boolean red = true;
     for (final int aChar : charArray) {
       final SevenSegment sevenSegment = sevenSegmentsLine[counter];
-      if(aChar == 0 && pre){
+      if (aChar == 0 && pre) {
         sevenSegment.setSegmentStyle(SevenSegment.SegmentStyle.BLACK);
-      } else if(aChar != 0 && pre){
+      } else if (aChar != 0 && pre) {
         pre = false;
         sevenSegment.setSegmentStyle(SevenSegment.SegmentStyle.RED);
-      } else if(sevenSegment.isDotOn()){
+      } else if (sevenSegment.isDotOn()) {
         sevenSegment.setSegmentStyle(SevenSegment.SegmentStyle.RED);
         red = false;
-      } else if (! red ){
+      } else if (!red) {
         sevenSegment.setSegmentStyle(SevenSegment.SegmentStyle.BLUE);
       }
       sevenSegment.setCharacter(aChar);
       counter++;
     }
-  }
-
-  private IPConnection getIpConnection() throws IOException, AlreadyConnectedException {
-    final IPConnection ipcon = new IPConnection();
-    ipcon.setAutoReconnect(true);
-    ipcon.connect("192.168.0.200",4223);
-    return ipcon;
   }
 
   private SevenSegment[] getSevenSegments(int nachkommastellen) {
@@ -212,11 +234,11 @@ public class Main extends Application {
 
     for (int i = sevenSegments.length - 1; i >= 0; i--) {
       SevenSegment sevenSegment = sevenSegments[i];
-      if(nachkommastellen == 0){
+      if (nachkommastellen == 0) {
         sevenSegment.setDotOn(true);
       }
 
-      if(nachkommastellen > 0 ){
+      if (nachkommastellen > 0) {
         sevenSegment.setSegmentStyle(SevenSegment.SegmentStyle.BLUE);
       }
       nachkommastellen--;
@@ -235,7 +257,7 @@ public class Main extends Application {
     return ia;
   }
 
-  private SevenSegment createSevenSegmentElement(final int value){
+  private SevenSegment createSevenSegmentElement(final int value) {
     return SevenSegmentBuilder.create().prefSize(26, 50)
         .character(value)
         .segmentStyle(SevenSegment.SegmentStyle.RED)
@@ -244,13 +266,14 @@ public class Main extends Application {
   }
 
   private final Insets padding = new Insets(5, 5, 5, 5);
-  private  HBox createLine(){
+
+  private HBox createLine() {
     final HBox hBox = new HBox();
     hBox.setPadding(padding);
     return hBox;
   }
 
-  private Label createLabel(final String text){
+  private Label createLabel(final String text) {
     final Label label = new Label(text);
     label.setTextFill(Color.STEELBLUE);
     label.setStyle("-fx-font-size: 15px");
