@@ -52,9 +52,6 @@ public class SevenSegmentLine extends VBox {
     init();
   }
 
-
-
-
   private synchronized int[] getCharArrayFromRawValue(int rawValueInt) {
     final String rawValue = String.format("%07d", rawValueInt);
     int[] ia = new int[7];
@@ -145,8 +142,4 @@ public class SevenSegmentLine extends VBox {
       nachkommastellen--;
     }
   }
-
-//  public SevenSegment[] getSevenSegments() {
-//    return sevenSegments;
-//  }
 }

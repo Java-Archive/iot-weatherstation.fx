@@ -35,7 +35,12 @@ public class Main extends Application {
   private int masterPort = 4223;
 
   public static void main(String[] args) {
-    masterIP = args[0];
+
+    if(args.length == 0){
+      masterIP = "127.0.0.1";
+    } else{
+      masterIP = args[0];
+    }
     launch(args);
   }
 
@@ -96,39 +101,43 @@ public class Main extends Application {
   private void initTinkerForgeElements(SimpleGauge thermoMeter,
                                        SevenSegmentLine row01,
                                        SevenSegmentLine row02,
-                                       SevenSegmentLine row03)
-      throws IOException, AlreadyConnectedException, NotConnectedException, TimeoutException {
+                                       SevenSegmentLine row03) {
     //Connect TinkerForge Elements
     ipcon.setAutoReconnect(true);
-    ipcon.connect(masterIP, masterPort);
-    ipcon.addEnumerateListener((uid, s1, c, shorts, shorts1, deviceIdentifier, i1) -> {
-      switch (deviceIdentifier) {
-        case 216: temperatureUID = uid ; break;
-        case 221: barometerUID = uid ; break;
-        case 21: ambientLightUID = uid ; break;
-        case 27: humidityUID = uid ; break;
-      }
-    });
-    ipcon.enumerate();
+
+    try {
+      ipcon.connect(masterIP, masterPort);
+      ipcon.addEnumerateListener((uid, s1, c, shorts, shorts1, deviceIdentifier, i1) -> {
+        switch (deviceIdentifier) {
+          case 216: temperatureUID = uid ; break;
+          case 221: barometerUID = uid ; break;
+          case 21: ambientLightUID = uid ; break;
+          case 27: humidityUID = uid ; break;
+        }
+      });
+      ipcon.enumerate();
 
 
-    temp = new BrickletTemperature(temperatureUID, ipcon);
-    temp.addTemperatureListener(i -> Platform.runLater(() -> thermoMeter.setValue((i / 100.0) + 20)));
-    temp.setTemperatureCallbackPeriod(1000);  //TODO einstellbar
+      temp = new BrickletTemperature(temperatureUID, ipcon);
+      temp.addTemperatureListener(i -> Platform.runLater(() -> thermoMeter.setValue((i / 100.0) + 20)));
+      temp.setTemperatureCallbackPeriod(1000);  //TODO einstellbar
 
-    //fuehrende 0 bei weniger 7 Stellen
-    barometer = new BrickletBarometer(barometerUID, ipcon);
+      //fuehrende 0 bei weniger 7 Stellen
+      barometer = new BrickletBarometer(barometerUID, ipcon);
 //    barometer.addAirPressureListener(i -> Platform.runLater(() -> setTheSegments(sevenSegmentsLine01, i)));
-    barometer.addAirPressureListener(i -> Platform.runLater(() -> row01.setTheSegments(i)));
-    barometer.setAirPressureCallbackPeriod(1000); //TODO einstellbar
+      barometer.addAirPressureListener(i -> Platform.runLater(() -> row01.setTheSegments(i)));
+      barometer.setAirPressureCallbackPeriod(1000); //TODO einstellbar
 
-    ambientLight = new BrickletAmbientLight(ambientLightUID, ipcon);
-    ambientLight.addIlluminanceListener(i -> Platform.runLater(() -> row02.setTheSegments(i)));
-    ambientLight.setIlluminanceCallbackPeriod(1000); //TODO einstellbar
+      ambientLight = new BrickletAmbientLight(ambientLightUID, ipcon);
+      ambientLight.addIlluminanceListener(i -> Platform.runLater(() -> row02.setTheSegments(i)));
+      ambientLight.setIlluminanceCallbackPeriod(1000); //TODO einstellbar
 
-    humidity = new BrickletHumidity(humidityUID, ipcon);
-    humidity.addHumidityListener(i -> Platform.runLater(() -> row03.setTheSegments(i)));
-    humidity.setHumidityCallbackPeriod(1000);  //TODO einstellbar
+      humidity = new BrickletHumidity(humidityUID, ipcon);
+      humidity.addHumidityListener(i -> Platform.runLater(() -> row03.setTheSegments(i)));
+      humidity.setHumidityCallbackPeriod(1000);  //TODO einstellbar
+    } catch (IOException | AlreadyConnectedException | TimeoutException | NotConnectedException e) {
+      System.out.println("e = " + e);
+    }
   }
 
   private Clock createClock() {
